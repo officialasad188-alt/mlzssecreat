@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLZS Resource Hub</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font and smooth transitions */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Modal specific styling */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent background */
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            animation: slide-down 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        @keyframes slide-down {
+            0% { transform: translateY(-50px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-blue': '#4F46E5',
+                        'primary-light': '#6366F1',
+                        'neutral-light': '#F3F4F6',
+                        'success-green': '#10B981',
+                        'warning-orange': '#F59E0B',
+                    }
+                }
+            }
+        }
+        
+        // --- Core UI Functions ---
+
+        /**
+         * Closes the login modal.
+         */
+        function closeModal() {
+            const modal = document.getElementById('login-modal');
+            modal.classList.remove('opacity-100', 'pointer-events-auto');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+
+            // Ensure we are back on the login form view when closing
+            hideRequestForm();
+
+            // Update main content visibility
+            const mainContent = document.getElementById('main-content');
+            mainContent.classList.remove('opacity-0', 'scale-95');
+            mainContent.classList.add('opacity-100', 'scale-100');
+        }
+
+        /**
+         * Creates a custom message box instead of using alert().
+         */
+        function alertBox(title, message, colorClass = 'bg-primary-blue') {
+            const box = document.createElement('div');
+            box.id = 'custom-alert';
+            box.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300';
+            
+            box.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-2xl max-w-xs w-full text-center transform scale-100 transition-transform duration-300">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">${title}</h3>
+                    <p class="text-sm text-gray-600 mb-4">${message}</p>
+                    <button onclick="document.getElementById('custom-alert').remove()" 
+                            class="px-4 py-2 ${colorClass} text-white rounded-lg hover:opacity-90 transition duration-150">
+                        OK
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(box);
+        }
+
+        // --- Auth/Account Functions ---
+
+        /**
+         * Handles the login button click.
+         */
+        function handleLogin() {
+            const userId = document.getElementById('userId').value;
+            const welcomeText = document.getElementById('welcome-message');
+
+            if (userId.trim() !== "") {
+                welcomeText.textContent = `Hello, ${userId}!`;
+            } else {
+                 welcomeText.textContent = `Hello, User!`;
+            }
+            
+            console.log('Login attempt successful/simulated.');
+            closeModal();
+        }
+
+        /**
+         * Handles the skip button click.
+         */
+        function handleSkip() {
+            const welcomeText = document.getElementById('welcome-message');
+            welcomeText.textContent = `Hello, Guest!`;
+            closeModal();
+        }
+
+        /**
+         * Logic for the Account Button to re-open the Login Modal.
+         */
+        function handleAccountClick() {
+            hidePaperDetail(); // Ensure detail view is closed
+            const modal = document.getElementById('login-modal');
+            modal.style.display = 'flex';
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100', 'pointer-events-auto');
+        }
+        
+        /**
+         * Shows the account creation request form.
+         */
+        function showRequestForm() {
+            document.getElementById('login-form-wrapper').classList.add('hidden');
+            document.getElementById('request-form-wrapper').classList.remove('hidden');
+        }
+
+        /**
+         * Hides the account creation request form and returns to login.
+         */
+        function hideRequestForm() {
+            document.getElementById('request-form-wrapper').classList.add('hidden');
+            document.getElementById('login-form-wrapper').classList.remove('hidden');
+        }
+
+        /**
+         * Handles the submission of the account request form.
+         */
+        function submitAccountRequest() {
+            const name = document.getElementById('reqName').value;
+            const email = document.getElementById('reqEmail').value;
+
+            // Simple validation simulation
+            if (!name || !email) {
+                 alertBox('Error', 'Please fill in all required fields.', 'bg-red-500');
+                 return;
+            }
+
+            // Simulate submission process
+            console.log(`Account request submitted for: ${name} (${email})`);
+
+            // Show the success message and return to the main login form
+            alertBox(
+                'Request Sent!', 
+                'You have requested to create an account. We will send your ID and password within 24 hours.',
+                'bg-success-green'
+            );
+            
+            // Clear fields and switch back
+            document.getElementById('request-form').reset();
+            hideRequestForm();
+        }
+
+        // --- Filter/Search Functions ---
+
+        /**
+         * Dynamically updates the Exam Type options based on the selected class.
+         */
+        function updateExamOptions() {
+            const classSelect = document.getElementById('class-select');
+            const examSelect = document.getElementById('exam-select');
+            const selectedClass = classSelect.value;
+            const currentExam = examSelect.value; 
+
+            // Clear existing options
+            examSelect.innerHTML = '<option value="">All Exams</option>';
+
+            const baseOptions = [
+                { value: 'Annual', text: 'Annual' },
+                { value: 'Half-Yearly', text: 'Half-Yearly' }
+            ];
+
+            baseOptions.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option.value;
+                opt.textContent = option.text;
+                examSelect.appendChild(opt);
+            });
+
+            // Add 'Pre-Board' only for Class 10
+            if (selectedClass === '10') {
+                const preBoardOpt = document.createElement('option');
+                preBoardOpt.value = 'Pre-Board';
+                preBoardOpt.textContent = 'Pre-Board';
+                examSelect.appendChild(preBoardOpt);
+            }
+            
+            // Try to restore the previously selected value
+            if (currentExam !== 'Pre-Board' || selectedClass === '10') {
+                examSelect.value = currentExam;
+            } else {
+                examSelect.value = ''; 
+            }
+
+            handleSearch(); 
+        }
+
+        /**
+         * Simulates a search action for demonstration and filters content.
+         */
+        function handleSearch() {
+            // ... (Search and filter logic remains the same for simplicity) ...
+            const searchInput = document.getElementById('search-input');
+            const yearSelect = document.getElementById('year-select');
+            const examSelect = document.getElementById('exam-select');
+            const classSelect = document.getElementById('class-select'); 
+
+            const query = searchInput.value.toLowerCase().trim();
+            const selectedYear = yearSelect.value;
+            const selectedExam = examSelect.value.toLowerCase();
+            const selectedClass = classSelect.value; 
+            
+            const paperList = document.getElementById('paper-list').children;
+            let matchingPapersCount = 0;
+
+            const subjectMap = {
+                'it': 'computer/it', 'computer': 'computer/it', 'comp': 'computer/it',
+                'math': 'math', 'mathematics': 'math',
+                'hindi': 'hindi', 'hindy': 'hindi',
+                'english': 'english', 'eng': 'english',
+                'science': 'science', 'sience': 'science', 'sci': 'science',
+                'ssc': 'social science (ssc)', 'social': 'social science (ssc)', 'sosyal': 'social science (ssc)'
+            };
+
+            let correctedSubject = '';
+            
+            if (subjectMap[query]) {
+                correctedSubject = subjectMap[query];
+            } else {
+                for (const keyword in subjectMap) {
+                    if (query.includes(keyword) || keyword.includes(query)) {
+                        correctedSubject = subjectMap[keyword];
+                        break; 
+                    }
+                }
+            }
+            
+            for (let i = 0; i < paperList.length; i++) {
+                const paper = paperList[i];
+                const subject = paper.getAttribute('data-subject').toLowerCase();
+                const paperYear = paper.getAttribute('data-year');
+                const paperExam = paper.getAttribute('data-exam').toLowerCase();
+                const paperClass = paper.getAttribute('data-class');
+
+                let isSubjectMatch = true;
+                let isYearMatch = true;
+                let isExamMatch = true;
+                let isClassMatch = true;
+
+                if (query !== '') {
+                    isSubjectMatch = (correctedSubject !== '' && subject.includes(correctedSubject)) || 
+                                     (correctedSubject === '' && paper.textContent.toLowerCase().includes(query));
+                }
+
+                if (selectedYear !== '') {
+                    isYearMatch = paperYear === selectedYear;
+                }
+
+                if (selectedExam !== '') {
+                    isExamMatch = paperExam.includes(selectedExam);
+                }
+
+                if (selectedClass !== '') {
+                    isClassMatch = paperClass === selectedClass;
+                }
+
+                if (isSubjectMatch && isYearMatch && isExamMatch && isClassMatch) {
+                    paper.classList.remove('hidden');
+                    matchingPapersCount++;
+                } else {
+                    paper.classList.add('hidden');
+                }
+            }
+        }
+        
+        // --- Detail View Functions ---
+
+        /**
+         * Switches view to the detail page for a specific paper.
+         */
+        function showPaperDetail(subject, title, className, examType) {
+            // Hide the main content (search/filters/list)
+            document.getElementById('main-content').classList.add('hidden');
+            
+            // Show the detail content
+            const detailView = document.getElementById('paper-detail-view');
+            detailView.classList.remove('hidden');
+            
+            // Populate dynamic details
+            document.getElementById('detail-subject-header').textContent = subject;
+            document.getElementById('detail-title').textContent = title;
+            document.getElementById('detail-info').innerHTML = `
+                <span class="font-semibold text-primary-blue">Class ${className}</span> 
+                | 
+                <span class="text-red-500">${examType} Exam</span>
+            `;
+        }
+
+        /**
+         * Switches view back to the main list (The subject selection "toggle").
+         */
+        function hidePaperDetail() {
+            // Hide the detail content
+            document.getElementById('paper-detail-view').classList.add('hidden');
+            
+            // Show the main content
+            document.getElementById('main-content').classList.remove('hidden');
+        }
+
+        // --- More Options Modal Functions ---
+
+        function openMoreOptionsModal() {
+            const modal = document.getElementById('more-options-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.classList.add('opacity-100', 'pointer-events-auto');
+            }, 10);
+        }
+
+        function closeMoreOptionsModal() {
+            const modal = document.getElementById('more-options-modal');
+            modal.classList.remove('opacity-100', 'pointer-events-auto');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        function handleMoreOptionClick(option) {
+            let message = '';
+            let title = '';
+            let color = 'bg-primary-blue';
+            
+            if (option === 'aim') {
+                title = 'Our Aim';
+                message = 'Our goal is to provide easy, centralized access to previous year question papers for all students, helping them prepare effectively and achieve academic excellence.';
+            } else if (option === 'buy') {
+                title = 'Buy This Website';
+                message = 'Interested in acquiring or franchising this resource platform? Contact the administration for detailed business inquiries.';
+                color = 'bg-warning-orange';
+            } else if (option === 'subscription') {
+                title = 'Get Subscription';
+                message = 'A premium subscription unlocks access to model answers, detailed solutions, and personalized study guides. Contact us to subscribe!';
+                color = 'bg-success-green';
+            }
+            closeMoreOptionsModal();
+            alertBox(title, message, color);
+        }
+
+
+        // --- Execute on Window Load ---
+        window.onload = function() {
+            const modal = document.getElementById('login-modal');
+            
+            // Automatically show the modal after the page loads
+            setTimeout(() => {
+                modal.style.display = 'flex';
+                // Trigger transition after display is set
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0', 'pointer-events-none');
+                    modal.classList.add('opacity-100', 'pointer-events-auto');
+                }, 10);
+            }, 100); 
+
+            // Initialize exam options based on default class (or no class selected)
+            updateExamOptions();
+        };
+    </script>
+</head>
+<body class="bg-neutral-light min-h-screen">
+
+    <!-- 1. Header (Shared) -->
+    <header class="fixed top-0 left-0 w-full z-40 flex justify-between items-center px-4 sm:px-6 lg:px-12 py-4 bg-white shadow-xl">
+        <div class="flex items-center space-x-3">
+            <!-- MLZS Logo -->
+            <img src="https://mountliterazeeschool.in/wp-content/uploads/2024/12/Untitled-design-e1735205852170.png" 
+                 alt="MLZS Logo" 
+                 class="h-8 sm:h-10 w-auto object-contain">
+
+            <h1 class="text-xl sm:text-2xl font-extrabold text-primary-blue truncate">
+                MLZS Bhagalpur Hub
+            </h1>
+        </div>
+        <!-- Account button now opens login modal -->
+        <button onclick="handleAccountClick()"
+            class="flex items-center space-x-1 p-2 bg-primary-blue text-white rounded-lg hover:bg-primary-light transition duration-150 shadow-md transform hover:scale-[1.05]">
+            <!-- Icon for Account -->
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span class="hidden sm:inline font-medium">Account</span>
+        </button>
+    </header>
+
+    <!-- 2. Main Content (Dashboard area - Hidden until login/skip) -->
+    <!-- Increased padding-top (pt-28) to clear the fixed header effectively -->
+    <main id="main-content" class="transition-all duration-500 opacity-0 scale-95 w-full min-h-screen p-6 sm:p-10 lg:p-12 pt-28 bg-neutral-light shadow-none rounded-none">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Welcome Message and More Options -->
+            <div class="text-left space-y-4 mb-10 p-6 bg-white rounded-xl shadow-lg">
+                <div class="flex justify-between items-start">
+                    <h2 id="welcome-message" class="text-2xl font-bold text-gray-800">
+                        Welcome to the App!
+                    </h2>
+                    
+                    <!-- More Button -->
+                    <button onclick="openMoreOptionsModal()"
+                        class="flex-shrink-0 flex items-center space-x-1 px-4 py-2 bg-primary-blue text-white font-medium rounded-lg hover:bg-primary-light transition duration-150 shadow-lg transform hover:scale-[1.05]">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                        </svg>
+                        <span>More</span>
+                    </button>
+                </div>
+                <p class="text-gray-500">
+                    Use the filters and search bar below to refine your access to previous year question papers.
+                </p>
+                
+                <!-- Search Bar -->
+                <div class="mt-6 max-w-2xl">
+                    <form onsubmit="event.preventDefault(); handleSearch();">
+                        <div class="relative">
+                            <input type="text" id="search-input" placeholder="Search by subject: Math, Science, English, IT, Hindi, SSC..."
+                                class="w-full py-3 pl-12 pr-4 border border-gray-300 rounded-xl focus:ring-primary-blue focus:border-primary-blue transition duration-150 shadow-inner text-base">
+                            <!-- Search Icon -->
+                            <button type="submit" class="absolute left-0 top-0 h-full w-12 flex items-center justify-center text-gray-400 hover:text-primary-blue">
+                                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Filters -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-200 mt-6">
+                    
+                    <!-- Class Selector -->
+                    <div>
+                        <label for="class-select" class="block text-sm font-medium text-gray-700">Select Class</label>
+                        <select id="class-select" onchange="updateExamOptions()"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-lg focus:outline-none focus:ring-primary-blue focus:border-primary-blue shadow-sm">
+                            <option value="">All Classes</option>
+                            <option value="8">Class 8</option>
+                            <option value="9">Class 9</option>
+                            <option value="10">Class 10</option>
+                        </select>
+                    </div>
+
+                    <!-- Year Selector -->
+                    <div>
+                        <label for="year-select" class="block text-sm font-medium text-gray-700">Select Session Year</label>
+                        <select id="year-select" onchange="handleSearch()"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-lg focus:outline-none focus:ring-primary-blue focus:border-primary-blue shadow-sm">
+                            <option value="">All Years</option>
+                            <option value="2024">Session 2024</option>
+                            <option value="2023">Session 2023</option>
+                            <option value="2022">Session 2022</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Exam Type Selector -->
+                    <div>
+                        <label for="exam-select" class="block text-sm font-medium text-gray-700">Select Exam Type</label>
+                        <select id="exam-select" onchange="handleSearch()"
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-lg focus:outline-none focus:ring-primary-blue focus:border-primary-blue shadow-sm">
+                            <option value="">All Exams</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Paper List Container -->
+            <div class="mt-12">
+                <h3 class="text-2xl font-extrabold text-primary-blue mb-6">Previous Year Question Papers</h3>
+                <div id="paper-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Papers - Click to switch to Detail View -->
+                    <div onclick="showPaperDetail('Math', 'Mathematics Annual Exam 2023', '10', 'Annual')"
+                        data-subject="Math" data-year="2023" data-exam="Annual" data-class="10" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-red-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">Mathematics Annual Exam 2023</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class X | Subject: Math</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+                    
+                    <div onclick="showPaperDetail('Science', 'Science Half-Yearly 2022', '9', 'Half-Yearly')"
+                        data-subject="Science" data-year="2022" data-exam="Half-Yearly" data-class="9" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-green-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">Science Half-Yearly 2022</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class IX | Subject: Science</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+                    
+                    <div onclick="showPaperDetail('Computer/IT', 'Computer Application Annual 2024', '8', 'Annual')"
+                        data-subject="Computer/IT" data-year="2024" data-exam="Annual" data-class="8" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-purple-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">Computer Application Annual 2024</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class VIII | Subject: Computer/IT</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+
+                    <div onclick="showPaperDetail('English', 'English Language & Lit. Half-Yearly 2023', '10', 'Half-Yearly')"
+                        data-subject="English" data-year="2023" data-exam="Half-Yearly" data-class="10" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-yellow-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">English Language & Lit. Half-Yearly 2023</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class X | Subject: English</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+                    
+                    <div onclick="showPaperDetail('Social Science (SSC)', 'Social Science Pre-Board 2024', '10', 'Pre-Board')"
+                        data-subject="Social Science (SSC)" data-year="2024" data-exam="Pre-Board" data-class="10" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-blue-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">Social Science Pre-Board 2024</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class X | Subject: Social Science (SSC)</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+
+                    <div onclick="showPaperDetail('Hindi', 'Hindi Vyakaran Annual 2022', '9', 'Annual')"
+                        data-subject="Hindi" data-year="2022" data-exam="Annual" data-class="9" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-orange-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">Hindi Vyakaran Annual 2022</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class IX | Subject: Hindi</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+                    
+                    <div onclick="showPaperDetail('Science', 'Science Annual Exam 2024', '10', 'Annual')"
+                        data-subject="Science" data-year="2024" data-exam="Annual" data-class="10" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-green-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">Science Annual Exam 2024</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class X | Subject: Science</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+                    
+                    <div onclick="showPaperDetail('Math', 'Mathematics Half-Yearly 2024', '8', 'Half-Yearly')"
+                        data-subject="Math" data-year="2024" data-exam="Half-Yearly" data-class="8" 
+                        class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 cursor-pointer border-l-4 border-red-500">
+                        <h4 class="text-lg font-bold text-gray-900 truncate">Mathematics Half-Yearly 2024</h4>
+                        <p class="text-sm text-gray-500 mb-3">Class VIII | Subject: Math</p>
+                        <span class="text-primary-blue hover:text-primary-light font-medium text-sm">View Details &rarr;</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+    
+    <!-- 3. Paper Detail View (Hidden by default) -->
+    <!-- Increased padding-top (pt-28) to clear the fixed header effectively -->
+    <section id="paper-detail-view" class="hidden w-full min-h-screen p-6 sm:p-10 lg:p-12 pt-28 bg-white">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- Back Button / Subject Toggle -->
+            <button onclick="hidePaperDetail()"
+                    class="flex items-center space-x-2 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition duration-150 mb-8 shadow-md transform hover:scale-[1.02]">
+                <!-- Back Arrow Icon -->
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Back to Papers (Select Subject)</span>
+            </button>
+
+            <!-- Subject and Title -->
+            <div class="bg-primary-blue text-white p-6 sm:p-8 rounded-xl shadow-xl mb-8">
+                <h3 id="detail-subject-header" class="text-lg font-semibold uppercase opacity-80">
+                    <!-- Subject goes here (e.g., Science) -->
+                </h3>
+                <h2 id="detail-title" class="text-3xl sm:text-4xl font-extrabold mt-1">
+                    <!-- Paper Title goes here (e.g., Science Annual Exam 2024) -->
+                </h2>
+            </div>
+            
+            <div class="bg-neutral-light p-6 sm:p-8 rounded-xl shadow-inner space-y-6">
+                <p class="text-lg text-gray-700 font-medium border-b pb-4">
+                    Details: <span id="detail-info" class="text-gray-900 font-bold"></span>
+                </p>
+
+                <p class="text-gray-500">
+                    This resource is a full-length question paper from the specified session. You can choose to **download** the PDF for offline access or view a quick online **preview**.
+                </p>
+
+                <!-- Action Buttons: Download and Preview -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                    <button onclick="alertBox('Download Started', 'The PDF download for the selected paper is starting now!', 'bg-green-600')"
+                            class="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-150 shadow-lg transform hover:scale-[1.02]">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Download Paper PDF</span>
+                    </button>
+                    
+                    <button onclick="alertBox('Preview', 'A quick preview of the paper would open here (simulated).', 'bg-yellow-500')"
+                            class="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-yellow-500 text-gray-800 font-bold rounded-lg hover:bg-yellow-600 transition duration-150 shadow-lg transform hover:scale-[1.02]">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <span>Preview Online</span>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+
+    <!-- 4. Login Modal/Popup -->
+    <div id="login-modal" 
+         class="modal-overlay fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none"
+         style="display: none;">
+        
+        <div class="modal-content bg-white p-8 max-w-sm w-full mx-4 rounded-xl shadow-2xl transform">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Student Access Portal</h2>
+            
+            <!-- Login Form Wrapper (Default View) -->
+            <div id="login-form-wrapper">
+                <form onsubmit="event.preventDefault(); handleLogin();">
+                    <div class="mb-4">
+                        <label for="userId" class="block text-sm font-medium text-gray-700 mb-1">User ID / Username</label>
+                        <input type="text" id="userId" placeholder="Enter your ID or username" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="password" placeholder="••••••••" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-3">
+                        <button type="submit" 
+                                class="w-full bg-primary-blue text-white py-2 rounded-lg font-semibold hover:bg-primary-light transition duration-150 shadow-md">
+                            Log In
+                        </button>
+                        
+                        <button type="button" onclick="showRequestForm()"
+                                class="w-full bg-yellow-500 text-white py-2 rounded-lg font-medium hover:bg-yellow-600 transition duration-150 shadow-sm">
+                            Request to Create Account
+                        </button>
+
+                        <button type="button" onclick="handleSkip()"
+                                class="w-full bg-transparent text-gray-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition duration-150 border border-gray-300">
+                            Skip for now
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Account Request Form Wrapper (Hidden by Default) -->
+            <div id="request-form-wrapper" class="hidden">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Account Request</h3>
+                <p class="text-sm text-gray-500 mb-6 text-center">Fill in your details. We will process your request and email you login credentials within 24 hours.</p>
+
+                <form id="request-form" onsubmit="event.preventDefault(); submitAccountRequest();">
+                    <div class="mb-4">
+                        <label for="reqName" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" id="reqName" placeholder="Your Name" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+                    </div>
+                    <div class="mb-4">
+                        <label for="reqEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="reqEmail" placeholder="Your Email (for ID/Password)" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+                    </div>
+                    <div class="mb-6">
+                        <label for="reqPassword" class="block text-sm font-medium text-gray-700 mb-1">Desired Password</label>
+                        <input type="password" id="reqPassword" placeholder="Set a password" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+                    </div>
+
+                    <!-- Request Action Buttons -->
+                    <div class="space-y-3">
+                        <button type="submit" 
+                                class="w-full bg-success-green text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition duration-150 shadow-md">
+                            Submit Request
+                        </button>
+                        <button type="button" onclick="hideRequestForm()"
+                                class="w-full bg-transparent text-gray-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition duration-150 border border-gray-300">
+                            Cancel & Go Back to Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- 5. More Options Modal -->
+    <div id="more-options-modal" 
+         class="modal-overlay fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none"
+         style="display: none;">
+        
+        <div class="modal-content bg-white p-6 max-w-sm w-full mx-4 rounded-xl shadow-2xl transform">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center border-b pb-3">More Options</h2>
+            
+            <div class="space-y-4">
+                <button onclick="handleMoreOptionClick('aim')"
+                        class="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-primary-blue text-white rounded-lg font-medium hover:bg-primary-light transition duration-150 shadow-md transform hover:scale-[1.02]">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v14M9 19a2 2 0 002 2h7a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5z" /></svg>
+                    <span>Our Aim</span>
+                </button>
+                
+                <button onclick="handleMoreOptionClick('buy')"
+                        class="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-warning-orange text-gray-900 rounded-lg font-medium hover:bg-yellow-600 transition duration-150 shadow-md transform hover:scale-[1.02]">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <span>Buy This Website</span>
+                </button>
+
+                <button onclick="handleMoreOptionClick('subscription')"
+                        class="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-success-green text-white rounded-lg font-medium hover:bg-green-700 transition duration-150 shadow-md transform hover:scale-[1.02]">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                    <span>Get Subscription</span>
+                </button>
+            </div>
+            
+            <button onclick="closeMoreOptionsModal()"
+                    class="mt-6 w-full text-sm text-gray-500 hover:text-gray-900 transition duration-150">
+                Close
+            </button>
+        </div>
+    </div>
+
+</body>
+</html>
